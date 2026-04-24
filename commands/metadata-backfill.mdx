@@ -1,0 +1,110 @@
+---
+title: "metadata-backfill — Backfill sidecar files"
+description: "Regenerate .info.json, .metadata.json, and .nfo sidecars for already-archived video IDs in .archive.txt without re-downloading any media."
+---
+
+The `metadata-backfill` command reads each playlist's `.archive.txt` file, identifies already-archived video IDs, and fetches or regenerates the associated sidecar files. Use it to add `.info.json`, `.metadata.json`, and `.nfo` files to a library that was archived before sidecars were enabled, or to repair legacy filename stems.
+
+## Usage
+
+```bash
+ytdl-archiver metadata-backfill [OPTIONS]
+```
+
+## Options
+
+<ParamField path="-p / --playlists" type="string">
+  Path to a playlists file (JSON or TOML). Overrides the path resolved from config for this run.
+</ParamField>
+
+<ParamField path="-d / --directory" type="string">
+  Archive base directory override. Overrides `archive.base_directory` from config for this run.
+</ParamField>
+
+<ParamField path="--cookies-browser" type="choice">
+  Refresh cookies from a browser before the backfill run. Accepted values: `firefox`, `chrome`, `chromium`, `brave`, `edge`, `opera`, `vivaldi`, `whale`, `safari`.
+</ParamField>
+
+<ParamField path="--cookies-profile" type="string">
+  Browser profile name or full path to a profile directory. Used together with `--cookies-browser`.
+</ParamField>
+
+<ParamField path="--scope" type="choice" default="full">
+  Controls which sidecar files are written. Accepted values: `full`, `info-json`.
+
+  - **`full`** — writes `.info.json`, `.metadata.json`, and `.nfo` (respecting config gates). Also repairs legacy fallback stems.
+  - **`info-json`** — writes only `.info.json`.
+</ParamField>
+
+<ParamField path="--refresh-existing / --no-refresh-existing" type="boolean" default="false">
+  When enabled, re-fetches and overwrites sidecars even if `.info.json` already exists. Disabled by default; existing sidecars are skipped.
+</ParamField>
+
+<ParamField path="--limit-per-playlist" type="integer">
+  Maximum number of archived videos to process per playlist. Useful for incremental backfills on large libraries. No limit by default.
+</ParamField>
+
+<ParamField path="--continue-on-error / --fail-fast" type="boolean" default="true">
+  When `--continue-on-error` (default), processing continues after a per-video failure and the error is logged. When `--fail-fast`, the command exits on the first failure.
+</ParamField>
+
+## Scope comparison
+
+<Tabs>
+  <Tab title="full (default)">
+    Fetches and writes all sidecar types for each archived ID:
+
+    - `.info.json` — yt-dlp metadata sidecar
+    - `.metadata.json` — project-owned full metadata payload
+    - `.nfo` — per-video Kodi NFO (when `media_server.generate_nfo = true`)
+
+    In `full` scope, backfill also repairs **legacy fallback stems** — filenames like `video-<id>_unknown-channel` that were generated before token metadata was available. These are renamed to the canonical config-derived stem.
+
+    <Warning>
+      If a canonical target stem already exists on disk, the rename is skipped and a warning is emitted. No files are overwritten.
+    </Warning>
+  </Tab>
+  <Tab title="info-json">
+    Fetches and writes only `.info.json` for each archived ID. No NFO, no `.metadata.json`, and no stem repairs. Useful when you only need yt-dlp metadata without the full sidecar set.
+  </Tab>
+</Tabs>
+
+## Rate limiting and pacing
+
+Backfill reuses the `archive.delay_between_videos` setting from config as its request pacing interval — both between individual video requests and as the extractor sleep time.
+
+```toml
+[archive]
+delay_between_videos = 10   # seconds between each backfilled video
+```
+
+If YouTube rate-limiting is detected during a run with `--continue-on-error`, the command warns and pauses processing for the remainder of the current playlist before moving to the next.
+
+<Note>
+  The `[[playlists]].name` field is used as the `tvshow.nfo` title, matching the behavior of the `archive` command. If `name` is missing or empty, the `path` value is used as fallback.
+</Note>
+
+## Examples
+
+```bash
+# Backfill all sidecars with defaults
+ytdl-archiver metadata-backfill
+
+# Only write .info.json, skip NFO and metadata.json
+ytdl-archiver metadata-backfill --scope info-json
+
+# Refresh existing sidecars (re-fetch even if .info.json exists)
+ytdl-archiver metadata-backfill --refresh-existing
+
+# Limit to 50 videos per playlist (useful for large libraries)
+ytdl-archiver metadata-backfill --limit-per-playlist 50
+
+# Stop immediately on the first error instead of continuing
+ytdl-archiver metadata-backfill --fail-fast
+
+# Refresh cookies from Chrome before backfilling
+ytdl-archiver metadata-backfill --cookies-browser chrome
+
+# Combine: info-json only, cap per playlist, verbose output
+ytdl-archiver -v metadata-backfill --scope info-json --limit-per-playlist 20
+```

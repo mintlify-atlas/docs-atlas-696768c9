@@ -1,0 +1,82 @@
+---
+title: "ytdl-archiver: YouTube archive CLI for media servers"
+description: "ytdl-archiver downloads YouTube playlists and produces NFO sidecars, subtitles, and thumbnails ready for Jellyfin, Emby, and Kodi libraries."
+---
+
+ytdl-archiver is a modern Python command-line tool that downloads YouTube playlists using yt-dlp and produces media-server-ready sidecar files alongside each video. It is designed for building structured archives compatible with Jellyfin, Emby, and Kodi — handling format selection, NFO generation, subtitle embedding, and thumbnail downloads automatically.
+
+## What ytdl-archiver produces
+
+Every successful archive run creates a structured set of files alongside each downloaded video:
+
+- **Media file** — `.mp4` (or configured format), selected at maximum quality, remuxed away from WebM by default
+- **NFO sidecar** — Kodi/Jellyfin/Emby-compatible XML with episode metadata, ratings, and genres
+- **Metadata sidecars** — `.info.json` (yt-dlp native sidecar) and `.metadata.json` (full run context owned by ytdl-archiver)
+- **Subtitles** — Language-tagged `.srt` files (for example `<stem>.en.srt`) with optional embedding
+- **Thumbnail** — `.jpg` sidecar for media server artwork, when enabled
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Media server sidecars" icon="tv" href="/guides/media-server-setup">
+    NFO files compatible with Jellyfin, Emby, and Kodi — including episode tags, ratings, and genres.
+  </Card>
+  <Card title="Flexible per-playlist config" icon="sliders" href="/configuration/playlists">
+    Per-playlist download overrides, container policies, subtitle pipelines, and filename tokens.
+  </Card>
+  <Card title="Channel and playlist search" icon="magnifying-glass" href="/commands/search">
+    Discover channels and playlists interactively and append them directly to your playlists file.
+  </Card>
+  <Card title="Metadata backfill" icon="clock-rotate-left" href="/commands/metadata-backfill">
+    Retroactively generate NFO and metadata sidecars for already-archived videos.
+  </Card>
+  <Card title="Browser cookie refresh" icon="cookie" href="/configuration/cookies">
+    Automatically refresh cookies from Firefox, Chrome, and other browsers before each run.
+  </Card>
+  <Card title="Dedupe and consolidate" icon="copy" href="/commands/dedupe">
+    Merge duplicate video sets from separate directories into a single canonical archive.
+  </Card>
+</CardGroup>
+
+## Use cases
+
+ytdl-archiver is a good fit if you want to:
+
+- Build a Jellyfin, Emby, or Kodi library from YouTube channels or playlists
+- Create a personal long-term archive with full metadata and subtitle records
+- Automate recurring downloads with per-playlist format and quality preferences
+- Backfill NFO and sidecar metadata for an existing yt-dlp archive
+
+## Dependencies
+
+Before installing, make sure these are available on your system:
+
+| Dependency | Required | Notes |
+|---|---|---|
+| Python 3.14+ | Yes | Required at runtime |
+| [`uv`](https://docs.astral.sh/uv/) | Yes (recommended install method) | Used to install and run ytdl-archiver |
+| FFmpeg | Yes | Must be on your `PATH`; used for remuxing and subtitle embedding |
+| Deno or Node.js | Recommended | Improves yt-dlp extraction compatibility |
+| Firefox | Recommended | Enables browser cookie extraction |
+| Rust | Optional | Only needed for setup TUI development |
+
+<Note>
+  If FFmpeg is not on your `PATH`, archive runs will fail at the remux step. See [Installation](/installation) for platform-specific instructions.
+</Note>
+
+## Explore the docs
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install via uv, pip, or from source. Covers system requirements and FFmpeg setup.
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Run setup, define your playlists, and start your first archive in minutes.
+  </Card>
+  <Card title="Command reference" icon="terminal" href="/commands/archive">
+    Full reference for `archive`, `metadata-backfill`, `search`, `dedupe`, and more.
+  </Card>
+  <Card title="Configuration" icon="gear" href="/configuration/overview">
+    Customize download formats, filenames, cookies, and media server output.
+  </Card>
+</CardGroup>

@@ -1,0 +1,144 @@
+---
+title: "Playlists configuration for ytdl-archiver"
+description: "Configure playlists.toml with required fields, optional name, and per-playlist download overrides using canonical or yt-dlp-style keys."
+---
+
+ytdl-archiver reads the list of playlists to archive from `~/.config/ytdl-archiver/playlists.toml`. Each entry defines a YouTube playlist or channel ID and the local directory path where its videos are stored. You can also attach per-playlist download settings that override the global `[download]` defaults for that playlist only.
+
+## File format
+
+Playlists are defined as a TOML array of tables using `[[playlists]]`. Each entry is a separate playlist or channel.
+
+```toml
+[[playlists]]
+id = "UUxxxxxxxxxxxxxxxxxxxxxx"
+path = "Music/Example Channel"
+name = "Example Music Channel"
+
+[playlists.download]
+format = "bestaudio"
+write_subtitles = false
+write_thumbnail = true
+```
+
+### TOML vs JSON
+
+TOML is the preferred format for new installations. Legacy JSON playlists files (`playlists.json`) are still supported for backwards compatibility, but TOML is preferred and JSON support may be removed in a future version.
+
+<Tip>
+  Use the `convert-playlists` command to migrate a legacy JSON playlists file to TOML format:
+
+  ```bash
+  ytdl-archiver convert-playlists -i playlists.json -o playlists.toml
+  ```
+</Tip>
+
+## Required fields
+
+<ParamField path="id" type="string" required>
+  The YouTube playlist or channel ID. Found in the playlist/channel URL. For example, `UUxxxxxxxxxxxxxxxxxxxxxx` or `PLxxxxxxxxxxxxxxxxxxxxxx`.
+</ParamField>
+
+<ParamField path="path" type="string" required>
+  The subdirectory path relative to `archive.base_directory` where this playlist's videos are stored. For example, `"Music/Example Channel"`.
+</ParamField>
+
+## Optional fields
+
+<ParamField path="name" type="string">
+  A human-readable display name for the playlist. Used as the `tvshow.nfo` title in media server metadata. If omitted or empty, the value of `path` is used as a fallback. This field affects both `archive` and `metadata-backfill` runs.
+</ParamField>
+
+## Per-playlist download overrides
+
+You can attach a `[playlists.download]` table to any `[[playlists]]` entry to override global `[download]` settings for that playlist. All keys accept both canonical snake_case names and yt-dlp-style aliases.
+
+```toml
+[[playlists]]
+id = "PLxxxxxxxxxxxxxxxxxxxxxx"
+path = "Tech/Some Series"
+
+[playlists.download]
+format = "bestvideo[height<=1080]+bestaudio/best[height<=1080]"
+write_subtitles = true
+subtitle_languages = ["en", "es"]
+container_policy = "force_mp4"
+```
+
+### Supported override keys
+
+The following keys are accepted in `[playlists.download]`. Each row shows the canonical name and its accepted alias (where one exists).
+
+| Canonical key | yt-dlp alias | Description |
+|---|---|---|
+| `format` | — | yt-dlp format selector string |
+| `format_sort` | — | Comma-separated sort criteria |
+| `merge_output_format` | — | Output container when merging streams |
+| `container_policy` | — | Container selection policy |
+| `write_info_json` | `writeinfojson` | Write yt-dlp `.info.json` sidecar |
+| `write_max_metadata_json` | — | Write project `.metadata.json` sidecar (canonical key only) |
+| `write_subtitles` | `writesubtitles` | Download subtitle sidecar files |
+| `embed_subtitles` | `embedsubtitles` | Embed subtitles into the video container |
+| `subtitle_format` | `subtitlesformat` | Preferred subtitle format |
+| `convert_subtitles` | `convertsubtitles` | Convert subtitles to this format |
+| `subtitle_languages` | `subtitleslangs` | List of subtitle language codes |
+| `write_thumbnail` | `writethumbnail` | Download thumbnail sidecar |
+| `thumbnail_format` | — | Thumbnail image format |
+
+<Note>
+  `write_max_metadata_json` only accepts the canonical snake_case key in playlist overrides. The yt-dlp-style alias is not supported for this field.
+</Note>
+
+### Container policy values
+
+<AccordionGroup>
+  <Accordion title="no_webm_prefer_mp4 (default)">
+    Preserves maximum resolution. When quality is tied between formats, prefers mp4. If the merged output would be a WebM file, remuxes to mp4 or mkv instead.
+  </Accordion>
+  <Accordion title="force_mp4">
+    Always targets mp4-first selection and remux behavior, regardless of source format.
+  </Accordion>
+  <Accordion title="prefer_source">
+    Keeps the source container unless another setting (such as `merge_output_format`) forces a conversion.
+  </Accordion>
+</AccordionGroup>
+
+## Full example
+
+The following `playlists.toml` shows multiple entries with varying override configurations:
+
+```toml
+[[playlists]]
+id = "UUxxxxxxxxxxxxxxxxxxxxxx"
+path = "Music/Example Channel"
+name = "Example Music Channel"
+
+[playlists.download]
+format = "bestaudio"
+write_subtitles = false
+write_thumbnail = true
+
+[[playlists]]
+id = "PLxxxxxxxxxxxxxxxxxxxxxx"
+path = "Tech/Video Series"
+name = "Video Series"
+
+[playlists.download]
+format = "bestvideo[height<=1080]+bestaudio/best[height<=1080]"
+subtitle_languages = ["en", "es"]
+container_policy = "force_mp4"
+
+[[playlists]]
+id = "UUyyyyyyyyyyyyyyyyyyyy"
+path = "Docs/Another Channel"
+```
+
+## Migrating from JSON
+
+If you have an existing `playlists.json` file, run the conversion command to produce a `playlists.toml`:
+
+```bash
+ytdl-archiver convert-playlists -i ~/.config/ytdl-archiver/playlists.json
+```
+
+The command reads the legacy JSON format and writes an equivalent TOML file (replacing the `.json` extension with `.toml`). The original JSON file is left in place until you remove it.

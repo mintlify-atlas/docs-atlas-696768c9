@@ -1,0 +1,148 @@
+---
+title: "archive — Download YouTube playlists"
+description: "Download YouTube playlists with yt-dlp and generate sidecars: .mp4, .info.json, .metadata.json, .nfo, language-tagged subtitles, and thumbnails."
+---
+
+The `archive` command is the primary way to download YouTube playlists. It reads your `playlists.toml`, downloads each video, and writes a full set of sidecar artifacts alongside every `.mp4` file. If `config.toml` is missing when you run this command, setup runs automatically before the archive begins.
+
+## Usage
+
+```bash
+ytdl-archiver archive [OPTIONS]
+```
+
+```bash
+# From a source checkout
+uv run ytdl-archiver archive [OPTIONS]
+```
+
+## Global options
+
+These options apply to every command and must be placed before the subcommand name.
+
+<ParamField path="-c / --config" type="string">
+  Path to a configuration file. Defaults to `~/.config/ytdl-archiver/config.toml`.
+</ParamField>
+
+<ParamField path="-v / --verbose" type="boolean">
+  Enable structured verbose diagnostics (debug/info). Does not enable raw yt-dlp passthrough output.
+</ParamField>
+
+<ParamField path="-q / --quiet" type="boolean">
+  Minimal output — errors and failure-oriented summary only.
+</ParamField>
+
+<ParamField path="--no-color" type="boolean">
+  Disable colored text in output. Symbols and emojis may still appear.
+</ParamField>
+
+## Command options
+
+<ParamField path="-p / --playlists" type="string">
+  Path to a playlists file (JSON or TOML). Overrides the path resolved from config for this run.
+</ParamField>
+
+<ParamField path="-d / --directory" type="string">
+  Archive base directory override. Overrides `archive.base_directory` from config for this run.
+</ParamField>
+
+<ParamField path="--cookies-browser" type="choice">
+  Refresh cookies from a browser profile before the archive run. Accepted values: `firefox`, `chrome`, `chromium`, `brave`, `edge`, `opera`, `vivaldi`, `whale`, `safari`.
+
+  When omitted, cookie refresh can still happen automatically if `cookies.source = "browser"` and `cookies.refresh_on_startup = true` are set in config.
+</ParamField>
+
+<ParamField path="--cookies-profile" type="string">
+  Browser profile name or full path to a profile directory. Used together with `--cookies-browser`. Overrides `cookies.profile` from config for this run.
+</ParamField>
+
+## Auto-setup behavior
+
+When `config.toml` does not exist and the invocation is not a help request, setup runs interactively and the process exits after setup completes. Run `archive` again afterward to start downloading.
+
+<Note>
+  Help invocations (`ytdl-archiver archive --help`) bypass the auto-setup check.
+</Note>
+
+## Output artifacts
+
+For each downloaded video, the archiver writes a set of sidecar files alongside the media file. Given an output stem `<base>`, the default artifact set is:
+
+<CardGroup cols={2}>
+  <Card title=".mp4" icon="film">
+    Primary video file. The container policy avoids final `.webm` artifacts and prefers maximum-resolution MP4 output.
+  </Card>
+  <Card title=".info.json" icon="file-code">
+    Full yt-dlp metadata sidecar written after each successful download.
+  </Card>
+  <Card title=".metadata.json" icon="database">
+    Project-owned full metadata payload including run context. A warning surfaces if this file cannot be written.
+  </Card>
+  <Card title=".nfo" icon="tv">
+    Per-video NFO file for Kodi and compatible media servers, when `media_server.generate_nfo = true`.
+  </Card>
+  <Card title=".en.srt" icon="closed-captioning">
+    Subtitle sidecar using `<base>.<lang>.<ext>` naming. Subtitles are also embedded in the video by default.
+  </Card>
+  <Card title=".jpg" icon="image">
+    Thumbnail sidecar, when `download.write_thumbnail = true`.
+  </Card>
+</CardGroup>
+
+<Note>
+  Subtitle sidecars are retained even when `embed_subtitles = true`. This keeps them available for external players and media servers.
+</Note>
+
+## Container policy
+
+The default `container_policy = "no_webm_prefer_mp4"` setting preserves maximum resolution while avoiding final `.webm` artifacts. When a tie exists between formats, MP4 is preferred. If the best source is WebM, it is remuxed to MP4 or MKV.
+
+```toml
+[download]
+merge_output_format = "mp4"
+container_policy = "no_webm_prefer_mp4"
+```
+
+Other available policies are `force_mp4` and `prefer_source`. See the [download configuration](/configuration/download) reference for details.
+
+## Cookie refresh behavior
+
+Cookie refresh priority for an archive run:
+
+<Steps>
+  <Step title="CLI flag takes precedence">
+    If `--cookies-browser` is passed, that browser is used regardless of config.
+  </Step>
+  <Step title="Config-driven refresh">
+    If `--cookies-browser` is omitted, the archiver checks `cookies.source` and `cookies.refresh_on_startup` in config. When both are set to `"browser"` and `true`, cookies are refreshed from `cookies.browser` before the run.
+  </Step>
+  <Step title="Manual file fallback">
+    If neither applies, the archiver uses the cookie file at `http.cookie_file` without refreshing.
+  </Step>
+</Steps>
+
+<Warning>
+  If cookie refresh fails at startup (for example, the browser profile is locked), the archive run exits immediately with an error. Fix the browser profile or switch to `cookies.source = "manual_file"` to continue.
+</Warning>
+
+## Examples
+
+```bash
+# Archive using defaults from config
+ytdl-archiver archive
+
+# Override the playlists file and archive directory
+ytdl-archiver archive -p ~/my-playlists.toml -d ~/Videos/archive
+
+# Refresh cookies from Firefox before archiving
+ytdl-archiver archive --cookies-browser firefox
+
+# Refresh cookies from a specific Firefox profile
+ytdl-archiver archive --cookies-browser firefox --cookies-profile default-release
+
+# Verbose diagnostics
+ytdl-archiver -v archive
+
+# Minimal output
+ytdl-archiver -q archive
+```

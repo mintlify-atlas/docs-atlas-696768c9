@@ -1,0 +1,130 @@
+---
+title: "Media server setup with Jellyfin, Emby, and Kodi"
+description: "Configure ytdl-archiver to generate NFO sidecars, thumbnails, and subtitles that Jellyfin, Emby, and Kodi recognise automatically."
+---
+
+ytdl-archiver produces a set of sidecar files alongside each downloaded video that media servers can pick up automatically — NFO metadata, thumbnail artwork, and language-tagged subtitle files. By default, NFO generation is enabled and targets the Kodi XML format, which Jellyfin and Emby also understand.
+
+## Recommended configuration
+
+Add the following to `~/.config/ytdl-archiver/config.toml` to enable all media-server-friendly sidecars:
+
+```toml
+[media_server]
+generate_nfo = true
+nfo_format = "kodi"
+
+[download]
+write_thumbnail = true
+write_subtitles = true
+embed_subtitles = true
+```
+
+`generate_nfo = true` is already the default. Set `nfo_format` to `"kodi"` for Jellyfin and Kodi, or `"emby"` if you prefer Emby's native XML schema. All other keys here are also defaults, so you only need to override them when you want a different value.
+
+<Note>
+The archive base directory defaults to `~/Videos/YouTube`. Point your media server library scan at this path (or the value of `archive.base_directory` in your config) to pick up all playlists.
+</Note>
+
+## Sidecar files produced per video
+
+For a video whose output stem is `<base>` (for example `2024-03-15_my-video-title_channelname`), a default archive run writes:
+
+| File | Purpose |
+| ---- | ------- |
+| `<base>.mp4` | Video file |
+| `<base>.nfo` | Episode-level NFO metadata |
+| `<base>.jpg` | Thumbnail artwork sidecar |
+| `<base>.en.srt` | Language-tagged subtitle sidecar |
+| `<base>.info.json` | yt-dlp raw metadata |
+| `<base>.metadata.json` | Project-owned full metadata payload |
+
+Subtitle files follow the `<base>.<lang>.<ext>` naming pattern (for example `video.en.srt`). This naming convention is auto-detected by Jellyfin and Emby without any additional configuration. When `embed_subtitles = true`, the subtitles are also embedded into the container and the sidecar is retained.
+
+## NFO file format
+
+The per-video NFO uses the `<episodedetails>` XML root (Kodi format) or `<Item>` (Emby format). The fields written from video metadata include:
+
+| NFO field | Source |
+| --------- | ------ |
+| `title` | Video title |
+| `showtitle` | Channel / uploader name |
+| `season` | Year of upload (or `1` when playlist index is used) |
+| `episode` | Day-of-year of upload (or playlist index position) |
+| `aired` / `premiered` | Upload date formatted as `YYYY-MM-DD` |
+| `uniqueid` | YouTube video ID |
+| `runtime` | Duration in seconds |
+| `rating` / `votes` | Average rating and like/view count |
+| `genre` | Video categories from YouTube metadata |
+| `tag` | Video tags from YouTube metadata |
+| `plot` / `outline` | Full and truncated description |
+| `studio` | Channel / uploader name |
+| `thumb` | Local thumbnail filename or thumbnail URL |
+
+<Note>
+NFO files use XML entity escaping. For example, a category named `People & Blogs` appears as `People &amp; Blogs` in the raw XML file but is parsed and displayed correctly by every media server.
+</Note>
+
+### tvshow.nfo
+
+Each playlist directory also receives a `tvshow.nfo` file. Its `<title>` is set to the `name` field in your `playlists.toml` entry. If `name` is absent or empty, the `path` value is used as a fallback. This file signals to Jellyfin and Emby that the directory should be treated as a TV show library item.
+
+## Setting up your media server
+
+<Tabs>
+  <Tab title="Jellyfin">
+    Jellyfin reads Kodi-format NFO files natively. After running your first archive:
+
+    1. In Jellyfin, go to **Dashboard → Libraries** and add a new library.
+    2. Set the content type to **Shows**.
+    3. Add the archive base directory (default `~/Videos/YouTube`) as a media folder.
+    4. Under **Advanced**, enable **Save artwork into media folders** if you want Jellyfin to prefer local `<base>.jpg` files over remote artwork.
+    5. Run a library scan. Each playlist directory appears as a show, and each video appears as an episode with full metadata.
+
+    <Tip>
+    Jellyfin auto-detects subtitle sidecars named `<base>.<lang>.srt` without any extra setup. Language codes like `en`, `fr`, and `de` are resolved to the correct track label.
+    </Tip>
+  </Tab>
+  <Tab title="Emby">
+    To use the Emby XML schema instead of Kodi format, set `nfo_format = "emby"` in your config. The Emby NFO uses `<Item>` as its root element with field names like `<Name>`, `<SeriesName>`, and `<RunTimeTicks>`.
+
+    1. In Emby, go to **Manage Emby Server → Library** and add a library.
+    2. Set the content type to **TV Shows**.
+    3. Add the archive base directory as a folder.
+    4. Under **Metadata readers**, confirm NFO reading is enabled (it is by default).
+    5. Run a library scan to import all playlists and their episodes.
+
+    <Note>
+    Set `nfo_format = "kodi"` (the default) or `"emby"` depending on which XML schema you want. The `"kodi"` format uses `&lt;episodedetails&gt;` as the root, while `"emby"` uses `&lt;Item&gt;` with Emby-native field names like `&lt;Name&gt;` and `&lt;RunTimeTicks&gt;`.
+    </Note>
+  </Tab>
+  <Tab title="Kodi">
+    Kodi uses the `<episodedetails>` NFO format produced by the default `nfo_format = "kodi"` setting.
+
+    1. Open Kodi and go to **Videos → Files → Add videos**.
+    2. Browse to the archive base directory and add it as a source.
+    3. Set the content type to **TV shows** and the scraper to **Local information only** (or any scraper that reads NFO files).
+    4. Scan the library. Kodi reads each `<base>.nfo` file and populates metadata, artwork, and episode details directly from the sidecar.
+
+    <Tip>
+    Kodi picks up `<base>.jpg` thumbnail sidecars automatically when they share the same stem as the video file.
+    </Tip>
+  </Tab>
+</Tabs>
+
+## Per-playlist download overrides
+
+You can override media-server sidecar settings per playlist in `playlists.toml`. For example, to disable NFO generation for a specific playlist while keeping it enabled globally:
+
+```toml
+[[playlists]]
+id = "UUxxxxxxxxxxxxxxxxxxxxxx"
+path = "Music/Example Channel"
+name = "Example Music Channel"
+
+[playlists.download]
+write_subtitles = false
+write_thumbnail = true
+```
+
+The `[media_server]` section does not support per-playlist overrides — `generate_nfo` and `nfo_format` are global. Use `[playlists.download]` for per-playlist control of artifact writing.

@@ -1,0 +1,74 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "ytdl-archiver",
+  "projectDescription": "A modern Python CLI for archiving YouTube playlists with media-server-friendly sidecar files including NFO metadata, thumbnails, and subtitles.",
+  "theme": "palm",
+  "primaryColor": "#82ab2c",
+  "lightColor": "#6c9e08",
+  "darkColor": "#dbe0b7",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Commands",
+            "pages": [
+              "commands/archive",
+              "commands/metadata-backfill",
+              "commands/search",
+              "commands/dedupe",
+              "commands/utilities"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/overview",
+              "configuration/playlists",
+              "configuration/download",
+              "configuration/cookies"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/media-server-setup",
+              "guides/terminal-output",
+              "guides/migration"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Download YouTube playlists with yt-dlp, with configurable format and quality",
+    "Generate media-server-friendly NFO sidecar files for Jellyfin/Emby/Kodi",
+    "Automatic thumbnail and subtitle sidecar downloads with embedding support",
+    "Interactive first-run setup wizard with Ratatui TUI",
+    "Channel/playlist discovery via search command",
+    "Metadata backfill for previously archived videos",
+    "Duplicate detection and archive consolidation via dedupe command",
+    "Cookie refresh from browser profiles for authenticated downloads",
+    "Highly configurable filename tokens, container policies, and per-playlist overrides"
+  ],
+  "publicApiSurface": [
+    "ytdl-archiver archive",
+    "ytdl-archiver metadata-backfill",
+    "ytdl-archiver search",
+    "ytdl-archiver dedupe",
+    "ytdl-archiver convert-playlists",
+    "ytdl-archiver init",
+    "~/.config/ytdl-archiver/config.toml",
+    "~/.config/ytdl-archiver/playlists.toml"
+  ]
+}

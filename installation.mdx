@@ -1,0 +1,125 @@
+---
+title: "Installing ytdl-archiver on any platform"
+description: "Install ytdl-archiver via uv, pip, or from source. Covers Python 3.14+ requirements, FFmpeg setup by OS, and verifying your install."
+---
+
+ytdl-archiver is a Python CLI tool distributed on PyPI. The recommended installation method is `uv tool install`, which isolates the package in its own environment and puts the `ytdl-archiver` binary on your `PATH` automatically. pip and source installs are also supported.
+
+## System requirements
+
+Before installing ytdl-archiver, make sure you have the following:
+
+- **Python 3.14 or later** — required at runtime
+- **FFmpeg on your `PATH`** — required for remuxing and subtitle embedding
+- **uv** — required for the recommended install method (see below)
+- **Deno or Node.js** (recommended) — improves yt-dlp JavaScript extraction compatibility
+- **Firefox** (recommended) — enables browser cookie extraction
+
+## Installing FFmpeg
+
+ytdl-archiver requires FFmpeg to be available on your system `PATH`. Install it using your OS package manager:
+
+<Tabs>
+  <Tab title="macOS">
+    ```bash
+    brew install ffmpeg
+    ```
+  </Tab>
+  <Tab title="Ubuntu / Debian">
+    ```bash
+    sudo apt-get install ffmpeg
+    ```
+  </Tab>
+  <Tab title="Fedora">
+    ```bash
+    sudo dnf install ffmpeg
+    ```
+  </Tab>
+  <Tab title="Arch Linux">
+    ```bash
+    sudo pacman -S ffmpeg
+    ```
+  </Tab>
+  <Tab title="Windows">
+    ```powershell
+    winget install --id Gyan.FFmpeg --exact --accept-source-agreements --accept-package-agreements
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+  If `ffmpeg` is not found on your `PATH`, archive runs will fail at the remux step. Verify it is available by running `ffmpeg -version`.
+</Note>
+
+## Install ytdl-archiver
+
+<CodeGroup>
+
+```bash uv (recommended)
+uv tool install ytdl-archiver
+```
+
+```bash pip
+pip install ytdl-archiver
+```
+
+```bash From source
+git clone https://github.com/htmlgxn/ytdl-archiver.git
+cd ytdl-archiver
+uv sync
+```
+
+</CodeGroup>
+
+<Tip>
+  `uv tool install` places the `ytdl-archiver` binary in `~/.local/bin` and isolates the package in its own environment, avoiding conflicts with other Python projects.
+</Tip>
+
+### Installing uv
+
+If you do not have `uv` installed, you can install it with the official installer:
+
+<Tabs>
+  <Tab title="macOS / Linux">
+    ```bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    ```
+  </Tab>
+  <Tab title="Windows">
+    ```powershell
+    powershell -ExecutionPolicy Bypass -c "irm https://astral.sh/uv/install.ps1 | iex"
+    ```
+  </Tab>
+</Tabs>
+
+## Running from source
+
+If you cloned the repository, use `uv run` to invoke ytdl-archiver without a global install:
+
+```bash
+uv run ytdl-archiver [OPTIONS] COMMAND [ARGS]...
+```
+
+This is useful during development or when you want to test a local change without installing the package globally.
+
+<Note>
+  The source checkout also includes a `dev` dependency group with linting, type-checking, and test tools. If you are contributing to ytdl-archiver, see the development docs for the full contributor workflow.
+</Note>
+
+### Optional: Rust for setup TUI development
+
+The interactive setup wizard uses a Rust-based TUI binary. You only need Rust installed if you are modifying the setup TUI component itself — standard use of ytdl-archiver does not require it.
+
+## Verifying the installation
+
+After installing, confirm the binary is available and working:
+
+```bash
+ytdl-archiver --help
+```
+
+You should see the top-level help output listing available commands (`archive`, `metadata-backfill`, `search`, `convert-playlists`, `init`). If the command is not found, make sure `~/.local/bin` is on your `PATH`.
+
+## Next steps
+
+Once ytdl-archiver is installed, follow the [Quickstart](/quickstart) to run first-time setup, define your playlists, and start your first archive run.

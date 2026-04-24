@@ -1,0 +1,82 @@
+---
+title: "search — Discover channels and playlists"
+description: "Search YouTube for channels and playlists, then use fzf or a numbered menu to select entries and append them to playlists.toml automatically."
+---
+
+The `search` command queries YouTube for channels (and optionally playlists), presents results in an interactive selector, prompts you for an archive path for each selection, and appends the new entries directly to `playlists.toml`. It is the fastest way to add new sources to your archive without manually editing configuration files.
+
+## Usage
+
+```bash
+ytdl-archiver search [OPTIONS] [QUERY]
+```
+
+## Options
+
+<ParamField path="QUERY" type="string">
+  Search query string. If omitted, the command prompts you to enter one interactively.
+</ParamField>
+
+<ParamField path="--include-playlists" type="boolean">
+  Include playlist results alongside channel results. By default only channels are returned.
+</ParamField>
+
+## Interactive flow
+
+<Steps>
+  <Step title="Enter a query">
+    Pass `QUERY` as a positional argument, or let the command prompt you for it.
+
+    ```bash
+    ytdl-archiver search "linux tutorials"
+    ```
+  </Step>
+  <Step title="Select results">
+    Results are shown in an interactive selector. If [`fzf`](https://github.com/junegunn/fzf) is installed, it opens a multi-select fuzzy finder with columns for type, title, channel, subscriber count, and archive ID. Without `fzf`, a numbered list is printed and you enter comma-separated numbers to select.
+
+    ```
+    Select channels/playlists > linux tutorials
+      [channel] Example Linux Channel    example-linux    subs:142000    UCxxxxxxxx...
+      [channel] Another Linux Guide      another-guide    subs:58000     UCyyyyyyyy...
+    ```
+  </Step>
+  <Step title="Set archive paths">
+    For each selected result, the command prompts for the subdirectory path where videos will be archived. A slugified default is suggested based on the channel name.
+
+    ```
+    Archive path for "Example Linux Channel" [example-linux-channel]:
+    ```
+  </Step>
+  <Step title="Written to playlists.toml">
+    Selected entries are appended to `playlists.toml`. Duplicate IDs are automatically skipped.
+
+    ```
+    Search selection complete. Added: 2, skipped duplicates: 0
+    ```
+  </Step>
+</Steps>
+
+## fzf integration
+
+`fzf` is an optional dependency that significantly improves the selection experience. When it is on your `PATH`, the search command opens a full-screen multi-select finder. Without it, the command falls back to a plain numbered terminal menu.
+
+<Tip>
+  Install `fzf` via your package manager for the best search experience: `brew install fzf`, `apt install fzf`, or see the [fzf releases page](https://github.com/junegunn/fzf/releases).
+</Tip>
+
+## Examples
+
+```bash
+# Search by passing query directly
+ytdl-archiver search "cooking channel"
+
+# Include playlist results in addition to channels
+ytdl-archiver search --include-playlists "python tutorials"
+
+# Let the command prompt for the query
+ytdl-archiver search
+```
+
+<Note>
+  Duplicate archive IDs are silently skipped when writing to `playlists.toml`. Running `search` for a channel you have already added is safe.
+</Note>

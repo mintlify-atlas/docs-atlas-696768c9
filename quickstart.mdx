@@ -1,80 +1,105 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: "Quickstart: archive your first playlist"
+description: "Go from a fresh install to a running archive in four steps: run init, define playlists.toml, then start your first ytdl-archiver archive run."
 ---
 
-## Get started in three steps
+This guide walks you through the minimum steps to get ytdl-archiver running and archive your first YouTube playlist. By the end you will have config files in `~/.config/ytdl-archiver/` and a completed archive run producing media files and sidecar metadata.
 
-Get your documentation site running locally and make your first customization.
+<Steps>
+  <Step title="Install ytdl-archiver">
+    If you have not installed ytdl-archiver yet, the fastest path is `uv tool install`. FFmpeg must be on your `PATH` before you continue.
 
-### Step 1: Set up your local environment
+    ```bash
+    uv tool install ytdl-archiver
+    ```
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+    For full installation options — including pip, from-source, and FFmpeg setup — see the [Installation guide](/installation).
+  </Step>
 
-### Step 2: Deploy your changes
+  <Step title="Run first-time setup">
+    Run the interactive setup wizard to generate your configuration files:
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    ```bash
+    ytdl-archiver init
+    ```
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    The wizard creates two template files:
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    - `~/.config/ytdl-archiver/config.toml` — global settings for download behavior, cookies, and output
+    - `~/.config/ytdl-archiver/playlists.toml` — the list of playlists and channels to archive
 
-### Step 3: Go live
+    <Note>
+      You do not need to run `init` explicitly. If `config.toml` is missing when you run any non-help command (such as `ytdl-archiver archive`), setup runs automatically and exits after completing. You can then edit the generated files and re-run your command.
+    </Note>
+  </Step>
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+  <Step title="Define your playlists">
+    Open `~/.config/ytdl-archiver/playlists.toml` in your editor and add the channels or playlists you want to archive. Each entry uses a `[[playlists]]` block:
+
+    ```toml
+    [[playlists]]
+    id = "UUxxxxxxxxxxxxxxxxxxxxxx"
+    path = "Music/Example Channel"
+    name = "Example Music Channel"
+
+    [playlists.download]
+    format = "bestaudio"
+    write_subtitles = false
+    write_thumbnail = true
+    ```
+
+    Key fields:
+
+    | Field | Description |
+    |---|---|
+    | `id` | YouTube channel or playlist ID (the `UC…` or `PL…` identifier from the URL) |
+    | `path` | Relative path under your archive base directory where files are saved |
+    | `name` | Human-readable name used in NFO metadata and logs |
+    | `[playlists.download]` | Optional per-playlist overrides for format, subtitles, thumbnails, and more |
+
+    <Tip>
+      You can use the `ytdl-archiver search` command to discover channel and playlist IDs interactively and append them to `playlists.toml` automatically.
+    </Tip>
+
+    <Note>
+      Both `playlists.toml` and the legacy `playlists.json` format are supported. If both exist in the config directory, TOML takes precedence.
+    </Note>
+  </Step>
+
+  <Step title="Run the archive">
+    Start the archive with:
+
+    ```bash
+    ytdl-archiver archive
+    ```
+
+    ytdl-archiver will iterate through every playlist in `playlists.toml`, download new videos, and write sidecar files alongside each one. Videos already present in the playlist's `.archive.txt` file are skipped automatically.
+
+    For each downloaded video you will get:
+
+    - A media file (`.mp4` by default, remuxed away from WebM)
+    - `<stem>.info.json` — yt-dlp native metadata sidecar
+    - `<stem>.metadata.json` — ytdl-archiver full run context
+    - `<stem>.nfo` — Kodi/Jellyfin/Emby-compatible episode XML (when enabled)
+    - `<stem>.en.srt` (or other language codes) — subtitle files with optional embedding
+    - `<stem>.jpg` — thumbnail sidecar (when `write_thumbnail = true`)
+  </Step>
+</Steps>
+
+## Where config files live
+
+| File | Purpose |
+|---|---|
+| `~/.config/ytdl-archiver/config.toml` | Global settings: archive directory, download defaults, cookies, output format |
+| `~/.config/ytdl-archiver/playlists.toml` | List of playlists and per-playlist overrides |
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Command reference" icon="terminal" href="/commands/archive">
+    Full options for `archive`, `metadata-backfill`, `search`, and more — including cookie flags, directory overrides, and verbosity controls.
+  </Card>
+  <Card title="Configuration" icon="gear" href="/configuration/overview">
+    Customize download formats, container policies, subtitle behavior, filename templates, and media server NFO output.
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

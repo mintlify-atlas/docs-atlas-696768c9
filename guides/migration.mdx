@@ -1,0 +1,145 @@
+---
+title: "Migration guide for ytdl-archiver upgrades"
+description: "Migrate from script-based usage to the CLI, follow the 0.2.x-to-0.3.0 checklist, and review breaking changes introduced in v0.4.0 and v0.5.0."
+---
+
+This guide covers how to migrate from legacy script-based usage and from earlier releases of ytdl-archiver. If you are upgrading from `0.2.x` to `0.3.0`, follow the checklist in full. If you are already on `0.3.0` or later, review the version-specific sections for any breaking changes that affect your setup.
+
+## From script-based usage (pre-CLI era)
+
+Earlier versions of ytdl-archiver were invoked as a plain Python script. The entry point and argument format have changed.
+
+**Before:**
+
+```bash
+python archive.py -j playlists.json -d /path/to/archive
+```
+
+**After:**
+
+```bash
+ytdl-archiver archive -p /path/to/playlists.toml -d /path/to/archive
+```
+
+Or, when running from a cloned source with `uv`:
+
+```bash
+uv run ytdl-archiver archive -p /path/to/playlists.toml -d /path/to/archive
+```
+
+### Config and playlists location
+
+Configuration and playlist files now live in a dedicated config directory rather than the working directory:
+
+| File | Location |
+| ---- | -------- |
+| Primary config | `~/.config/ytdl-archiver/config.toml` |
+| Default playlists | `~/.config/ytdl-archiver/playlists.toml` |
+| Legacy JSON playlists | `~/.config/ytdl-archiver/playlists.json` (still supported) |
+
+Legacy JSON playlists remain supported. On startup, if `playlists.toml` or `playlists.json` exists in the current working directory and the config directory does not yet have a `playlists.toml`, the file is automatically moved into `~/.config/ytdl-archiver/`.
+
+### Converting a JSON playlists file to TOML
+
+Use the built-in conversion command to migrate your playlists file:
+
+```bash
+ytdl-archiver convert-playlists -i playlists.json -o playlists.toml
+```
+
+TOML is the preferred format going forward. The `[[playlists]]` array syntax maps directly to the JSON array structure you already have.
+
+## 0.2.x to 0.3.0 checklist
+
+<Steps>
+  <Step title="Update dependencies">
+    Run `uv sync --dev` to bring your environment up to date with the `0.3.0` lock file.
+
+    ```bash
+    uv sync --dev
+    ```
+  </Step>
+  <Step title="Validate the command surface">
+    Check that all first-class commands are available and review their flags:
+
+    ```bash
+    ytdl-archiver --help
+    ytdl-archiver archive --help
+    ytdl-archiver metadata-backfill --help
+    ytdl-archiver search --help
+    ```
+  </Step>
+  <Step title="Review config defaults">
+    Open `~/.config/ytdl-archiver/config.toml` and review the current defaults against the `0.3.0` reference. Key changes to check:
+
+    - `download.container_policy` defaults to `no_webm_prefer_mp4`
+    - `download.write_info_json` and `download.write_max_metadata_json` both default to `true`
+    - `media_server.generate_nfo` defaults to `true` with `nfo_format = "kodi"`
+  </Step>
+  <Step title="Confirm sidecar settings">
+    Verify that the metadata artifacts you want are enabled. The `0.3.0` defaults produce the following sidecars per video:
+
+    - `<stem>.info.json` — yt-dlp raw metadata
+    - `<stem>.metadata.json` — project-owned full metadata payload
+    - `<stem>.nfo` — media server NFO (when `media_server.generate_nfo = true`)
+    - `<stem>.<lang>.srt` — subtitle sidecars (language-tagged)
+    - `<stem>.jpg` — thumbnail artwork (when `write_thumbnail = true`)
+
+    If you do not want all of these, disable them explicitly in your config.
+  </Step>
+  <Step title="Run a sample archive and verify sidecars">
+    Run a small archive against a single short playlist to confirm everything is working:
+
+    ```bash
+    ytdl-archiver archive -p /path/to/test-playlists.toml
+    ```
+
+    Check that the expected sidecar files appear alongside each downloaded video.
+  </Step>
+</Steps>
+
+## 0.3.0 highlights
+
+These are the key behavioral changes introduced in `0.3.0` that may affect your existing setup:
+
+<AccordionGroup>
+  <Accordion title="Verbose mode is structured diagnostics only">
+    Verbose mode (`-v`) now emits structured log output via structlog. It does **not** pass through raw yt-dlp verbose output. If you previously relied on yt-dlp's own verbose messages appearing in `ytdl-archiver -v` output, those are no longer available through this flag.
+  </Accordion>
+  <Accordion title="Default container policy: no_webm_prefer_mp4">
+    The default `container_policy` is now `no_webm_prefer_mp4`. This preserves maximum resolution while preferring `.mp4` when quality is tied, and remuxes to `.mp4` or `.mkv` to avoid final `.webm` outputs. If you were relying on `.webm` container output, set `container_policy = "prefer_source"` in your config.
+  </Accordion>
+  <Accordion title="New default metadata sidecars">
+    Both `<stem>.info.json` and `<stem>.metadata.json` are written by default on every archive run. The `.metadata.json` file is a project-owned full metadata payload that includes run context. A warning is surfaced if this file cannot be written.
+  </Accordion>
+  <Accordion title="Subtitle naming and pipeline defaults">
+    Subtitle sidecars now use the `<stem>.<lang>.<ext>` naming pattern (for example `video.en.srt`). Conversion to `.srt` is the default target, and embedding is enabled with sidecar retention. If you were relying on subtitle files without language codes in the filename, update any downstream tooling that references subtitle paths.
+  </Accordion>
+</AccordionGroup>
+
+## v0.4.0 notes
+
+`v0.4.0` focused on internal refactoring of the core dedupe and archive logic, along with several important bug fixes:
+
+- Skipped videos that should have been processed are now handled correctly
+- Audio language selection no longer picks incorrect tracks
+- Video stream selection is now consistent across format resolution
+
+<Warning>
+`v0.4.0` includes significant internal changes. Additional testing is recommended if you are upgrading a large archive — run against a sample playlist first to verify behavior before processing your full archive.
+</Warning>
+
+## v0.5.0 notes
+
+`v0.5.0` enhanced the `dedupe` command and improved filename matching:
+
+- The `dedupe` command now supports archive consolidation and cross-bucket filename fallback matching
+- Undated archive duplicates sharing normalized filenames are consolidated automatically
+- Non-video source files are disposed after replace operations
+- Apostrophe normalization for filename matching (for example, `there's` matches `theres`)
+- Live chat JSON files are now imported to a `live-chats/` subdirectory rather than the playlist root
+- Part files (`.part`) are ignored during archive scans
+
+<Note>
+If you have existing live chat JSON files in your archive directories, they will not be automatically moved to `live-chats/` for already-archived content. Only new downloads place live chat files in the subdirectory.
+</Note>

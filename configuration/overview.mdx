@@ -1,0 +1,164 @@
+---
+title: "Configuration overview for ytdl-archiver"
+description: "Learn where config files live, how playlists are resolved, and explore the full default config.toml covering all nine configuration sections."
+---
+
+ytdl-archiver stores all configuration in `~/.config/ytdl-archiver/config.toml`. On first run, the tool generates this file and a companion `playlists.toml` automatically. You only need to override the values you want to change — every option has a sensible default.
+
+## Config file location
+
+The primary configuration file lives at:
+
+```
+~/.config/ytdl-archiver/config.toml
+```
+
+You can also pass a custom path with the `--config` flag at runtime.
+
+## Playlists file resolution order
+
+When ytdl-archiver looks for your playlists file, it checks sources in this order:
+
+1. Explicit override via `--playlists` CLI flag or `config.set_playlists_file`
+2. `~/.config/ytdl-archiver/playlists.toml`
+3. `~/.config/ytdl-archiver/playlists.json` (legacy fallback)
+4. Falls back to creating `~/.config/ytdl-archiver/playlists.toml` if none exist
+
+## Startup migration
+
+When ytdl-archiver starts, it checks the current working directory for a `playlists.toml` or `playlists.json` file. If one exists and the config-directory `playlists.toml` does not yet exist, the file is automatically moved into `~/.config/ytdl-archiver/`. This migration only runs once — it stops as soon as the config-dir file exists.
+
+## Default config.toml
+
+The full default configuration is shown below. Copy this into your `config.toml` and modify only the fields you want to change.
+
+```toml
+[archive]
+base_directory = "~/Videos/YouTube"
+delay_between_videos = 10
+delay_between_playlists = 30
+max_retries = 3
+retry_backoff_factor = 2.0
+
+[download]
+format = "bestvideo*+bestaudio/best"
+format_sort = "res,br,fps,container"
+merge_output_format = "mp4"
+container_policy = "no_webm_prefer_mp4"
+write_info_json = true
+write_max_metadata_json = true
+write_subtitles = true
+embed_subtitles = true
+subtitle_format = "srt/best"
+convert_subtitles = "srt"
+subtitle_languages = ["en"]
+write_thumbnail = true
+thumbnail_format = "jpg"
+max_concurrent_downloads = 1
+
+[filename]
+tokens = ["upload_date", "title", "channel"]
+token_joiner = "_"
+date_format = "yyyy-mm-dd"
+missing_token_behavior = "omit"
+
+[filename.case]
+title = "lower"
+channel = "lower"
+upload_date = "preserve"
+video_id = "lower"
+
+[shorts]
+detect_shorts = true
+shorts_subdirectory = "YouTube Shorts"
+aspect_ratio_threshold = 0.7
+
+[logging]
+level = "INFO"
+format = "json"
+file_path = "~/.local/share/ytdl-archiver/logs/app.log"
+max_file_size = "10MB"
+backup_count = 5
+
+[http]
+user_agent = "Mozilla/5.0 (X11; Linux x86_64; rv:136.0) Gecko/20100101 Firefox/136.0"
+request_timeout = 30
+connect_timeout = 10
+cookie_file = "~/cookies.txt"
+
+[search]
+backend_order = ["youtube_html"]
+backend_strict = false
+fallback_enabled = false
+fallback_on_zero_results = false
+fallback_on_error = false
+target_channel_candidates = 60
+max_backend_rounds = 2
+instances = [
+  "https://yewtu.be",
+  "https://vid.puffyan.us",
+  "https://inv.nadeko.net",
+]
+max_results = 20
+youtube_html_timeout_seconds = 8
+yt_dlp_timeout_seconds = 20
+
+[cookies]
+source = "browser"
+browser = "firefox"
+profile = ""
+refresh_on_startup = true
+
+[media_server]
+generate_nfo = true
+nfo_format = "kodi"
+```
+
+## Config sections
+
+| Section | Purpose |
+|---|---|
+| `[archive]` | Base directory, retry behavior, and pacing delays |
+| `[download]` | Format selection, subtitle pipeline, thumbnail, and container policy |
+| `[filename]` | Filename tokens, date format, case normalization |
+| `[shorts]` | YouTube Shorts detection and subdirectory routing |
+| `[logging]` | Log level, format, file rotation |
+| `[http]` | User agent, timeouts, and cookie file path |
+| `[search]` | Channel search backends and timeout settings |
+| `[cookies]` | Cookie source, browser selection, and refresh behavior |
+| `[media_server]` | NFO generation and format (Kodi/Jellyfin/Emby) |
+
+## Runtime validation
+
+ytdl-archiver validates your configuration on startup. The following checks are enforced:
+
+- Archive parent directory must exist
+- `logging.level` must be one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`
+- `download.format` must not be empty
+- `download.container_policy` must be one of `no_webm_prefer_mp4`, `force_mp4`, `prefer_source`
+- `cookies.source` must be `browser` or `manual_file`
+- `cookies.refresh_on_startup` must be a boolean
+- `cookies.browser` must be a supported browser name when `source = "browser"`
+- `filename.tokens` must be a non-empty list with no duplicates, using only `title`, `channel`, `upload_date`, `video_id`
+- `filename.token_joiner` must be non-empty and cannot contain `/` or `\`
+- `filename.date_format` must be one of `yyyy-mm-dd`, `yyyymmdd`, `yyyy_mm_dd`, `yyyy.mm.dd`
+- `filename.missing_token_behavior` must be `omit`
+- Per-token case modes must be one of `preserve`, `lower`, `upper`, `title`
+
+<Note>
+  The legacy `filename.date_separator` key is silently ignored if present. Use `filename.date_format` instead.
+</Note>
+
+## Explore configuration topics
+
+<CardGroup cols={3}>
+  <Card title="Playlists" icon="list" href="/configuration/playlists">
+    Define playlists, required and optional fields, and per-playlist download overrides.
+  </Card>
+  <Card title="Download options" icon="download" href="/configuration/download">
+    Format selection, subtitle pipeline, filename tokens, shorts detection, and artifact lifecycle.
+  </Card>
+  <Card title="Cookies" icon="cookie" href="/configuration/cookies">
+    Configure browser cookie refresh or manual cookie file for authenticated downloads.
+  </Card>
+</CardGroup>

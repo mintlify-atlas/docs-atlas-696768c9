@@ -1,0 +1,110 @@
+---
+title: "Utility commands — init and convert-playlists"
+description: "Use init to run the interactive Ratatui setup wizard and generate config files, or convert-playlists to migrate a legacy JSON playlists file to TOML."
+---
+
+ytdl-archiver includes two utility commands for setup and migration. `init` launches the interactive setup wizard to generate your initial config files. `convert-playlists` converts a legacy JSON playlists file to the TOML format used by current versions.
+
+---
+
+## init
+
+Run first-time setup interactively. This command generates `config.toml` and `playlists.toml` in `~/.config/ytdl-archiver/`.
+
+### Usage
+
+```bash
+ytdl-archiver init
+```
+
+### What it generates
+
+<CardGroup cols={2}>
+  <Card title="config.toml" icon="sliders">
+    Main configuration file at `~/.config/ytdl-archiver/config.toml`. Contains archive path, download settings, cookie config, filename tokens, and more.
+  </Card>
+  <Card title="playlists.toml" icon="list">
+    Playlists file at `~/.config/ytdl-archiver/playlists.toml`. Starts as an empty template; populate it using [`search`](/commands/search) or by editing manually.
+  </Card>
+</CardGroup>
+
+### Setup wizard
+
+The setup wizard is a [Ratatui](https://ratatui.rs)-based TUI application. When the binary is not already installed, it is built automatically from the bundled Rust source before launching.
+
+If the TUI is unavailable and auto-build fails, setup falls back to plain terminal prompts.
+
+<Steps>
+  <Step title="TUI binary check">
+    The setup runtime checks for the wizard binary. If `YTDL_ARCHIVER_SETUP_TUI_BIN` is set, that path is used directly. Otherwise the default location is checked.
+  </Step>
+  <Step title="Auto-build (if needed)">
+    When the binary is missing and auto-build is enabled (`YTDL_ARCHIVER_SETUP_TUI_AUTOBUILD=1`, the default), `cargo build` runs against the bundled Rust source. The build times out after `YTDL_ARCHIVER_SETUP_TUI_BUILD_TIMEOUT` seconds (default: 300).
+  </Step>
+  <Step title="Interactive wizard or terminal prompts">
+    The wizard collects your archive path, cookie preferences, and other settings, then writes the config files.
+  </Step>
+</Steps>
+
+### Setup environment variables
+
+These variables control the setup runtime bridge (`src/ytdl_archiver/setup/ratatui_bridge.py`):
+
+<ParamField path="YTDL_ARCHIVER_SETUP_TUI_BIN" type="string">
+  Explicit path to the setup wizard binary. When set, auto-build is skipped and this binary is used directly.
+</ParamField>
+
+<ParamField path="YTDL_ARCHIVER_SETUP_TUI_AUTOBUILD" type="string" default="1">
+  Enable or disable auto-build of the setup wizard binary. Set to `0` to disable. Defaults to `1` (enabled).
+</ParamField>
+
+<ParamField path="YTDL_ARCHIVER_SETUP_TUI_BUILD_TIMEOUT" type="integer" default="300">
+  Timeout in seconds for the auto-build step. Increase this on slow machines.
+</ParamField>
+
+### Auto-setup on first run
+
+`init` is not the only way to trigger setup. Any command other than a help invocation will automatically run setup if `config.toml` is missing. After setup completes the process exits, and you re-run your original command.
+
+<Note>
+  `ytdl-archiver init` always runs setup regardless of whether `config.toml` already exists. Use it to regenerate or reset your configuration.
+</Note>
+
+---
+
+## convert-playlists
+
+Convert a legacy JSON playlists file to the TOML format. This is a one-time migration tool for users upgrading from older versions that used `playlists.json`.
+
+### Usage
+
+```bash
+ytdl-archiver convert-playlists -i playlists.json -o playlists.toml
+```
+
+### Options
+
+<ParamField path="-i / --input" type="string" required>
+  Path to the existing JSON playlists file to convert.
+</ParamField>
+
+<ParamField path="-o / --output" type="string">
+  Output path for the converted TOML file. Defaults to the input path with the extension replaced by `.toml`. For example, `playlists.json` becomes `playlists.json.toml` is **not** the default — the suffix is replaced, producing `playlists.toml`.
+</ParamField>
+
+### Examples
+
+```bash
+# Convert using the default output path (same filename, .toml suffix)
+ytdl-archiver convert-playlists -i ~/.config/ytdl-archiver/playlists.json
+
+# Specify an explicit output path
+ytdl-archiver convert-playlists -i playlists.json -o playlists.toml
+
+# Convert a file in the current directory
+ytdl-archiver convert-playlists -i ./playlists.json -o ./playlists.toml
+```
+
+<Tip>
+  After converting, move the output file to `~/.config/ytdl-archiver/playlists.toml` if it is not already there. ytdl-archiver resolves playlists from that location by default.
+</Tip>

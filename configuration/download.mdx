@@ -1,0 +1,187 @@
+---
+title: "Download and filename configuration options"
+description: "Reference for all download format, subtitle, thumbnail, filename token, shorts detection, and archive pacing options in config.toml."
+---
+
+The `[download]`, `[filename]`, `[shorts]`, and `[archive]` sections of `config.toml` control how ytdl-archiver selects video quality, names output files, handles subtitles and thumbnails, and paces archive runs. All values shown below are the defaults — only include settings you want to override.
+
+## [download] section
+
+The `[download]` section configures format selection, container behavior, subtitle handling, and thumbnail output.
+
+### Format selection
+
+<ParamField path="download.format" type="string" default="bestvideo*+bestaudio/best">
+  yt-dlp format selector string. Controls which video and audio streams are downloaded and merged. Accepts any valid yt-dlp format specification.
+</ParamField>
+
+<ParamField path="download.format_sort" type="string" default="res,br,fps,container">
+  Comma-separated sort criteria passed to yt-dlp's `--format-sort`. Determines preference order when multiple formats match the selector.
+</ParamField>
+
+<ParamField path="download.merge_output_format" type="string" default="mp4">
+  Output container format when yt-dlp merges separate video and audio streams. Passed as `--merge-output-format` to yt-dlp.
+</ParamField>
+
+<ParamField path="download.container_policy" type="string" default="no_webm_prefer_mp4">
+  Controls the container selection strategy. Accepted values:
+
+  - `no_webm_prefer_mp4` — Prefer mp4 when quality is tied; remux WebM outputs to mp4/mkv.
+  - `force_mp4` — Always target mp4 for selection and remux.
+  - `prefer_source` — Keep the source container unless another setting forces conversion.
+</ParamField>
+
+<ParamField path="download.max_concurrent_downloads" type="number" default="1">
+  Maximum number of videos downloaded in parallel within a single archive run. Increase with caution — higher values may trigger rate limiting.
+</ParamField>
+
+### Metadata sidecars
+
+<ParamField path="download.write_info_json" type="boolean" default="true">
+  Write a `<stem>.info.json` sidecar file containing the full yt-dlp metadata payload for each downloaded video.
+</ParamField>
+
+<ParamField path="download.write_max_metadata_json" type="boolean" default="true">
+  Write a `<stem>.metadata.json` sidecar file containing the project-owned full metadata payload plus run context. A warning is surfaced when this file cannot be written.
+</ParamField>
+
+### Subtitles
+
+<ParamField path="download.write_subtitles" type="boolean" default="true">
+  Download subtitle files as sidecars. Subtitles are named `<stem>.<lang>.<ext>` for media server auto-detection (for example `video.en.srt`).
+</ParamField>
+
+<ParamField path="download.embed_subtitles" type="boolean" default="true">
+  Embed subtitle tracks into the video container. When both `write_subtitles` and `embed_subtitles` are enabled, sidecar files are retained alongside embedded subtitles.
+</ParamField>
+
+<ParamField path="download.subtitle_format" type="string" default="srt/best">
+  Preferred subtitle format passed to yt-dlp. Uses yt-dlp format preference syntax — `srt/best` selects SRT if available, otherwise the best available format.
+</ParamField>
+
+<ParamField path="download.convert_subtitles" type="string" default="srt">
+  Convert downloaded subtitles to this format before writing sidecars and embedding. Set to an empty string to skip conversion.
+</ParamField>
+
+<ParamField path="download.subtitle_languages" type="string[]" default='["en"]'>
+  List of BCP-47 language codes for subtitles to download. For example `["en", "es", "fr"]`.
+</ParamField>
+
+### Thumbnails
+
+<ParamField path="download.write_thumbnail" type="boolean" default="true">
+  Download the video thumbnail as a sidecar image file (for example `<stem>.jpg`).
+</ParamField>
+
+<ParamField path="download.thumbnail_format" type="string" default="jpg">
+  Image format for the thumbnail sidecar. Common values: `jpg`, `png`, `webp`.
+</ParamField>
+
+---
+
+## [filename] section
+
+The `[filename]` section controls how output filenames are constructed from video metadata tokens.
+
+<ParamField path="filename.tokens" type="string[]" default='["upload_date", "title", "channel"]'>
+  Ordered list of metadata tokens used to build the output filename. Valid tokens: `upload_date`, `title`, `channel`, `video_id`. Tokens must be unique and the list must be non-empty.
+</ParamField>
+
+<ParamField path="filename.token_joiner" type="string" default="_">
+  String inserted between each token in the filename. Cannot be empty or contain `/` or `\`.
+</ParamField>
+
+<ParamField path="filename.date_format" type="string" default="yyyy-mm-dd">
+  Format for the `upload_date` token. Accepted values: `yyyy-mm-dd`, `yyyymmdd`, `yyyy_mm_dd`, `yyyy.mm.dd`. Videos with malformed or missing upload dates have the `upload_date` token omitted.
+</ParamField>
+
+<ParamField path="filename.missing_token_behavior" type="string" default="omit">
+  What to do when a token's value is unavailable. Only `omit` is supported in v1 — missing tokens are silently excluded from the filename.
+</ParamField>
+
+### [filename.case] subsection
+
+Controls case normalization per token. Accepted values for each field: `preserve`, `lower`, `upper`, `title`.
+
+<ParamField path="filename.case.title" type="string" default="lower">
+  Case normalization for the `title` token.
+</ParamField>
+
+<ParamField path="filename.case.channel" type="string" default="lower">
+  Case normalization for the `channel` token.
+</ParamField>
+
+<ParamField path="filename.case.upload_date" type="string" default="preserve">
+  Case normalization for the `upload_date` token.
+</ParamField>
+
+<ParamField path="filename.case.video_id" type="string" default="lower">
+  Case normalization for the `video_id` token.
+</ParamField>
+
+---
+
+## [shorts] section
+
+ytdl-archiver can detect YouTube Shorts based on aspect ratio and route them to a separate subdirectory.
+
+<ParamField path="shorts.detect_shorts" type="boolean" default="true">
+  Enable automatic YouTube Shorts detection. When enabled, videos with an aspect ratio below `aspect_ratio_threshold` are placed in `shorts_subdirectory` instead of the playlist's main path.
+</ParamField>
+
+<ParamField path="shorts.shorts_subdirectory" type="string" default="YouTube Shorts">
+  Subdirectory name (relative to the playlist path) where detected Shorts are stored.
+</ParamField>
+
+<ParamField path="shorts.aspect_ratio_threshold" type="number" default="0.7">
+  Videos with a width-to-height aspect ratio at or below this value are classified as Shorts. The default of `0.7` corresponds roughly to portrait-orientation video (9:16 is ~0.56).
+</ParamField>
+
+---
+
+## [archive] section
+
+The `[archive]` section controls the root output directory, retry behavior, and pacing between downloads.
+
+<ParamField path="archive.base_directory" type="string" default="~/Videos/YouTube">
+  Root directory for all archived content. Each playlist's `path` is resolved relative to this directory. The parent directory must exist at startup.
+</ParamField>
+
+<ParamField path="archive.delay_between_videos" type="number" default="10">
+  Seconds to wait between downloading individual videos within a playlist. Also used as the pacing delay during `metadata-backfill` runs.
+</ParamField>
+
+<ParamField path="archive.delay_between_playlists" type="number" default="30">
+  Seconds to wait between processing separate playlists in a single archive run.
+</ParamField>
+
+<ParamField path="archive.max_retries" type="number" default="3">
+  Maximum number of retry attempts for a failed video download before it is skipped.
+</ParamField>
+
+<ParamField path="archive.retry_backoff_factor" type="number" default="2.0">
+  Multiplier applied to the delay between retry attempts. With a factor of `2.0` and base delay of `10`, retries wait 10s, 20s, 40s, and so on.
+</ParamField>
+
+---
+
+## Artifact lifecycle
+
+For each successfully downloaded video with output stem `<base>`, ytdl-archiver produces the following files by default:
+
+| File | Condition |
+|---|---|
+| `<base>.mp4` | Always (or configured `merge_output_format`) |
+| `<base>.info.json` | When `write_info_json = true` |
+| `<base>.metadata.json` | When `write_max_metadata_json = true` |
+| `<base>.nfo` | When `media_server.generate_nfo = true` |
+| `<base>.<lang>.srt` | When `write_subtitles = true` (per language) |
+| `<base>.jpg` | When `write_thumbnail = true` |
+
+<Note>
+  When both `embed_subtitles` and `write_subtitles` are enabled, subtitle sidecar files are retained alongside the embedded tracks. Sidecar naming follows `<base>.<lang>.<ext>` for media player and media server auto-detection.
+</Note>
+
+<Tip>
+  Run `metadata-backfill --scope full` to regenerate `.nfo` and `.metadata.json` sidecars for already-archived videos without re-downloading media files.
+</Tip>

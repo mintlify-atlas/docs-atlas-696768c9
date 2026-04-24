@@ -1,97 +1,83 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "ytdl-archiver: YouTube playlist archiver for media servers"
+description: "Modern Python CLI for archiving YouTube playlists with NFO metadata, thumbnails, and subtitles — perfect for Jellyfin, Emby, and Kodi."
 ---
 
-## Setting up
+ytdl-archiver is a Python command-line tool that downloads YouTube playlists using yt-dlp and produces media-server-ready sidecar files alongside each video. Whether you're building a personal Jellyfin library or preserving a channel for long-term archiving, ytdl-archiver handles format selection, metadata generation, subtitle embedding, and thumbnail downloads automatically.
 
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install via uv, pip, or from source. Requires Python 3.14+ and FFmpeg.
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Run setup, define your playlists, and start your first archive in minutes.
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Command reference" icon="terminal" href="/commands/archive">
+    Full reference for archive, metadata-backfill, search, dedupe, and more.
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Configuration" icon="sliders" href="/configuration/overview">
+    Customize download formats, filenames, cookies, and media server output.
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## What ytdl-archiver produces
 
-Everything you need to create world-class documentation.
+Every successful archive run creates a structured set of files alongside each downloaded video:
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+- **Media file** — `.mp4` (or configured format), selected at maximum quality
+- **NFO sidecar** — Kodi/Jellyfin/Emby-compatible XML with episode metadata
+- **Metadata sidecars** — `.info.json` (yt-dlp) and `.metadata.json` (full run context)
+- **Subtitles** — Language-tagged `.srt` files with optional embedding
+- **Thumbnail** — `.jpg` sidecar for media server artwork
 
-## Need inspiration?
+## Get started
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<Steps>
+  <Step title="Install ytdl-archiver">
+    Install with uv (recommended) or pip. FFmpeg must be on your `PATH`.
+
+    ```bash
+    uv tool install ytdl-archiver
+    ```
+  </Step>
+  <Step title="Run first-time setup">
+    The interactive setup wizard generates your config files automatically.
+
+    ```bash
+    ytdl-archiver init
+    ```
+  </Step>
+  <Step title="Define your playlists">
+    Edit `~/.config/ytdl-archiver/playlists.toml` to add the channels or playlists you want to archive.
+  </Step>
+  <Step title="Archive">
+    Run the archive command to start downloading and generating sidecars.
+
+    ```bash
+    ytdl-archiver archive
+    ```
+  </Step>
+</Steps>
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Media server sidecars" icon="tv" href="/guides/media-server-setup">
+    NFO files compatible with Jellyfin, Emby, and Kodi — including episode tags, ratings, and genres.
+  </Card>
+  <Card title="Flexible configuration" icon="gear" href="/configuration/overview">
+    Per-playlist download overrides, container policies, filename tokens, and subtitle pipelines.
+  </Card>
+  <Card title="Channel search" icon="magnifying-glass" href="/commands/search">
+    Discover channels and playlists interactively and add them to your playlists file.
+  </Card>
+  <Card title="Metadata backfill" icon="clock-rotate-left" href="/commands/metadata-backfill">
+    Retroactively generate NFO and metadata sidecars for already-archived videos.
+  </Card>
+  <Card title="Dedupe & consolidate" icon="copy" href="/commands/dedupe">
+    Merge duplicate video sets from separate directories into a single archive.
+  </Card>
+  <Card title="Browser cookie refresh" icon="cookie" href="/configuration/cookies">
+    Automatically refresh cookies from Firefox, Chrome, and other browsers before each run.
+  </Card>
+</CardGroup>

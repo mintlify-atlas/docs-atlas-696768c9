@@ -1,0 +1,121 @@
+---
+title: "Terminal output modes: progress, quiet, and verbose"
+description: "Understand every output mode in ytdl-archiver — progress bars, quiet automation-friendly mode, structured verbose diagnostics, and no-color output."
+---
+
+ytdl-archiver's output is formatter-driven. The default progress mode shows a live progress bar per video, completion lines for each sidecar, and a playlist summary. You can switch to quiet mode for automated runs or verbose mode for structured diagnostics — each mode is designed for a distinct use case.
+
+<Tabs>
+  <Tab title="Progress (default)">
+    Progress mode is the default when you run `ytdl-archiver archive` without any flags. It shows the full download lifecycle in order: a header, then per-playlist and per-video updates, artifact completion lines, and a final summary.
+
+    **Typical output flow:**
+
+    1. Header with app name and version
+    2. Archive directory path
+    3. Playlist name and video count
+    4. Per-video progress bar (powered by tqdm)
+    5. Download completion line for the video file
+    6. Optional lines for subtitles, thumbnail, and NFO when generated
+    7. Warning lines for non-fatal issues
+    8. Playlist summary with counts of new, failed, and already up-to-date videos
+
+    **Representative output:**
+
+    ```text
+    📺 ytdl-archiver v<version>
+    🗂️ Archive directory: <path>/<directory>
+    📋 Processing: <playlist> (<n> videos)
+    🔵 <title> 45%|██████▌... [elapsed<remaining, rate]
+    ✅ Downloaded: <title> [1080p, .mp4, 350mb]
+    ✅ Downloaded subtitles: <title> [.srt]
+    ✅ Downloaded subtitles: <title> [.vtt -> .srt]
+    ✅ Downloaded subtitles: <title> [.vtt]
+    ✅ Thumbnail generated: <title> [.jpg]
+    ✅ .mp4 generated: <title> [1080p, 350mb]
+    ⚠️ Warning: <message>
+    📊 Playlist Complete: <n> new, <n> failed
+    ```
+
+    **Subtitle status semantics:**
+
+    The bracketed extension on subtitle completion lines indicates what actually happened during the subtitle pipeline:
+
+    | Status | Meaning |
+    | ------ | ------- |
+    | `[.srt]` | Subtitle is already `.srt`, or the final detected sidecar is `.srt` |
+    | `[.vtt -> .srt]` | Source was `.vtt` and was converted to `.srt` |
+    | `[.vtt]` | Fallback — `.srt` was not produced, `.vtt` sidecar retained |
+
+    Subtitle completion lines are emitted from post-download file inspection, so they appear correctly even when yt-dlp progress hook metadata is sparse. When subtitle embedding is enabled, sidecars are still retained and counted for these status lines.
+
+    <Note>
+    Subtitle completion lines reuse the active video title and should never display as `Unknown` during a normal download run.
+    </Note>
+  </Tab>
+  <Tab title="Quiet (-q)">
+    Quiet mode suppresses progress bars and success lines. Only errors, warnings, and failure-oriented summary lines are shown. This mode is well-suited for cron jobs, scripts, and any automated context where you only want to be notified of problems.
+
+    ```bash
+    ytdl-archiver archive -q
+    ```
+
+    In quiet mode:
+
+    - Progress bars are hidden
+    - `✅` success lines are suppressed
+    - `⚠️` warnings and errors are still printed
+    - Playlist summary lines are shown only when there are failures
+
+    <Tip>
+    Combine quiet mode with your system's logging or alerting infrastructure. Since only warnings and errors are emitted to stdout/stderr, you can pipe the output directly to a notification tool or log aggregator.
+    </Tip>
+  </Tab>
+  <Tab title="Verbose (-v)">
+    Verbose mode emits additional structured technical messages alongside the normal progress output. It is powered by structlog and provides insight into the internals of each archive run.
+
+    ```bash
+    ytdl-archiver archive -v
+    ```
+
+    Verbose mode includes diagnostics for:
+
+    - Metadata prefetch and fallback paths
+    - Cookie refresh lifecycle
+    - Playlist metadata fetch
+    - Format and container policy decisions
+    - Retry and failure context
+
+    <Warning>
+    Verbose mode does **not** pass through raw yt-dlp verbose output. It emits structured diagnostics that complement the normal formatter output — it does not replace progress lines, success lines, or summaries.
+    </Warning>
+
+    Verbose mode is most useful when debugging unexpected download failures, format selection behaviour, or cookie authentication issues. For routine runs, the default progress mode provides all the information you need.
+  </Tab>
+</Tabs>
+
+## No-color output
+
+Pass `--no-color` to disable colored text styling regardless of mode:
+
+```bash
+ytdl-archiver archive --no-color
+```
+
+This disables ANSI color codes in the output. Symbols and emojis may still appear depending on your terminal and formatter support. Use `--no-color` when piping output to a file or tool that does not handle ANSI escape sequences.
+
+## Combining flags
+
+Output flags can be combined with other `archive` options:
+
+```bash
+# Quiet mode with a custom archive directory
+ytdl-archiver archive -q -d /mnt/nas/videos
+
+# Verbose with no color, useful for log files
+ytdl-archiver archive -v --no-color
+```
+
+<Note>
+`-q` (quiet) and `-v` (verbose) are mutually exclusive in effect — quiet suppresses output while verbose adds more. If both are passed, the actual behaviour depends on the formatter resolution order. Use one at a time for predictable results.
+</Note>

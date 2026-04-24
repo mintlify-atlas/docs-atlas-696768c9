@@ -1,0 +1,103 @@
+---
+title: "dedupe — Merge and deduplicate video archives"
+description: "Merge videos from a source directory into your main archive, resolving duplicates by video ID and trashing or permanently deleting the losers."
+---
+
+The `dedupe` command compares videos in a source directory against your main archive, identifies duplicates by video ID, selects a winner for each matched set, and either moves losing copies to a trash directory or permanently deletes them. Use it to consolidate downloads from a separate machine or staging area into your primary archive.
+
+## Usage
+
+```bash
+ytdl-archiver dedupe SOURCE_DIR [ARCHIVE_DIR] [OPTIONS]
+```
+
+## Arguments
+
+<ParamField path="SOURCE_DIR" type="string" required>
+  Directory containing videos to merge into the archive. Must exist and must resolve to a different path than `ARCHIVE_DIR`.
+</ParamField>
+
+<ParamField path="ARCHIVE_DIR" type="string">
+  Destination archive directory. When omitted, defaults to the archive directory from config (`archive.base_directory`).
+</ParamField>
+
+## Options
+
+<ParamField path="--trash-dir" type="string">
+  Move losing duplicate files to this directory instead of deleting them. Mutually exclusive with `--delete`. Exactly one of `--trash-dir` or `--delete` must be specified.
+</ParamField>
+
+<ParamField path="--delete" type="boolean">
+  Permanently delete losing duplicate files. Mutually exclusive with `--trash-dir`. Exactly one of `--trash-dir` or `--delete` must be specified.
+</ParamField>
+
+<ParamField path="--dry-run" type="boolean">
+  Print the planned operations without modifying any files. Use this to preview what dedupe would do before committing.
+</ParamField>
+
+<ParamField path="--verbose" type="boolean">
+  Show per-duplicate detail blocks (VIDEO/SRC/ARC sections) for every processed set.
+</ParamField>
+
+<Warning>
+  You must specify exactly one of `--trash-dir` or `--delete`. Omitting both or providing both results in a usage error.
+</Warning>
+
+## Output format
+
+When `--verbose` is passed (or when duplicates are found), dedupe prints structured output blocks for each matched video set:
+
+```text
+VIDEO: <video-id-or-title>
+  SRC(<relative-source-dir>) -> TRASH
+    <stem>  (.mp4-12.34mb, .info.json, .en.srt)
+  ARC(<relative-archive-dir>) -> FINAL:<canonical-stem>
+    kept:
+      <stem>  (.mp4-15.67mb [WINNER])
+    imported:
+      <stem>  (.info.json)
+    removed:
+      <stem>  (.mp4-12.34mb [DUPLICATE])
+---
+SUMMARY processed=4 replaced=1 renamed=2 trash=3
+DONE
+```
+
+The `SUMMARY` line reports:
+
+- `processed` — total matched video sets examined
+- `replaced` — sets where the source copy replaced the archive copy
+- `renamed` — archive winners that were renamed to a canonical stem
+- `trash` or `delete` — total files disposed (trashed or deleted)
+
+## Matching behavior
+
+Dedupe matches files across source and archive using video ID extracted from filenames. Additional matching features (added in v0.5.0):
+
+- **Cross-bucket filename fallback** — matches files that span different subdirectories when the video ID is consistent
+- **Apostrophe normalization** — `"there's"` matches `"theres"` so apostrophe variants in titles do not prevent deduplication
+- **Live chat JSON import** — `.live_chat.json` files from the source are imported into a `live-chats/` subdirectory inside the archive destination
+- **Part file filtering** — `.part` files are ignored during scanning
+
+## Examples
+
+```bash
+# Preview what dedupe would do (no files changed)
+ytdl-archiver dedupe ~/Downloads/youtube --dry-run --delete
+
+# Merge source into config archive dir, trash losers
+ytdl-archiver dedupe ~/Downloads/youtube --trash-dir ~/Trash/dedupe
+
+# Merge into an explicit archive directory and delete losers
+ytdl-archiver dedupe ~/Downloads/youtube ~/Videos/archive --delete
+
+# Verbose output showing per-video detail
+ytdl-archiver dedupe ~/staging --trash-dir ~/trash --verbose
+
+# Quiet mode with dry-run to get just the summary
+ytdl-archiver -q dedupe ~/staging --dry-run --delete
+```
+
+<Tip>
+  Always run with `--dry-run` first to verify the planned operations before using `--delete`. Deleted files cannot be recovered.
+</Tip>

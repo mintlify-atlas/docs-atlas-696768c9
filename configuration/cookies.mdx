@@ -1,0 +1,101 @@
+---
+title: "Cookie configuration for authenticated downloads"
+description: "Configure ytdl-archiver to refresh cookies from your browser automatically or use a manually maintained cookie file for age-restricted content."
+---
+
+Some YouTube content requires authentication to download — age-restricted videos, members-only content, or private playlists. ytdl-archiver supports two cookie strategies: automatically extracting cookies from an installed browser before each run, or pointing to a cookie file you maintain yourself. Both modes are configured in the `[cookies]` and `[http]` sections of `config.toml`.
+
+## [cookies] section
+
+<ParamField path="cookies.source" type="string" default="browser">
+  The cookie source strategy. Accepted values:
+
+  - `browser` — Extract cookies from the configured browser before each archive run.
+  - `manual_file` — Use the file at `http.cookie_file` as-is. No automatic refresh occurs.
+</ParamField>
+
+<ParamField path="cookies.browser" type="string" default="firefox">
+  The browser from which to extract cookies when `source = "browser"`. Must be one of the supported browsers listed below.
+</ParamField>
+
+<ParamField path="cookies.profile" type="string" default="">
+  The browser profile name or path to use when extracting cookies. Leave empty to use the default profile. Useful when you have multiple browser profiles and want to target a specific one.
+</ParamField>
+
+<ParamField path="cookies.refresh_on_startup" type="boolean" default="true">
+  When `source = "browser"`, refresh cookies from the browser before each archive run. Set to `false` to skip the refresh step and use whatever cookies were last extracted.
+</ParamField>
+
+<Warning>
+  `cookies.browser` must be set to a supported browser name when `cookies.source = "browser"`. ytdl-archiver will fail validation at startup if this field is missing or invalid.
+</Warning>
+
+## Supported browsers
+
+The following browsers are supported for automatic cookie extraction:
+
+`firefox`, `chrome`, `chromium`, `brave`, `edge`, `opera`, `vivaldi`, `whale`, `safari`
+
+## [http] section — cookie file
+
+<ParamField path="http.cookie_file" type="string" default="~/cookies.txt">
+  Path to the Netscape-format cookie file used when `cookies.source = "manual_file"`. Also used as the destination path when the browser cookie extractor writes a refreshed cookie file. Tilde expansion is supported.
+</ParamField>
+
+## How each mode works
+
+<AccordionGroup>
+  <Accordion title="source = &quot;browser&quot; (default)">
+    Before each archive run, ytdl-archiver calls yt-dlp's browser cookie extractor to read cookies from the configured browser profile and write them to `http.cookie_file`. The refreshed cookie file is then passed to all download requests for that run.
+
+    This mode keeps your cookies current without manual intervention. It requires the configured browser to be installed and accessible on the system running ytdl-archiver.
+  </Accordion>
+  <Accordion title="source = &quot;manual_file&quot;">
+    ytdl-archiver reads cookies directly from `http.cookie_file` without attempting any refresh. You are responsible for keeping this file up to date. The file must be in Netscape cookie format (the format exported by browser extensions such as "Get cookies.txt").
+
+    Use this mode when the system running ytdl-archiver does not have a browser installed, or when you want full control over the cookie lifecycle.
+  </Accordion>
+</AccordionGroup>
+
+## CLI overrides
+
+You can override the cookie browser and profile for a single run without changing `config.toml`:
+
+```bash
+# Use Chrome with the default profile for this run only
+ytdl-archiver archive --cookies-browser chrome
+
+# Use a specific Firefox profile
+ytdl-archiver archive --cookies-browser firefox --cookies-profile work
+```
+
+`--cookies-browser` and `--cookies-profile` apply only to the current invocation. They do not modify the config file.
+
+## Example configuration
+
+### Browser mode (default)
+
+```toml
+[cookies]
+source = "browser"
+browser = "firefox"
+profile = ""
+refresh_on_startup = true
+
+[http]
+cookie_file = "~/cookies.txt"
+```
+
+### Manual file mode
+
+```toml
+[cookies]
+source = "manual_file"
+
+[http]
+cookie_file = "~/my-youtube-cookies.txt"
+```
+
+<Note>
+  When `refresh_on_startup = true`, the browser must be closed or not actively writing to its cookie database at the time ytdl-archiver runs. Some browsers lock their cookie database when open, which may cause extraction to fail.
+</Note>
